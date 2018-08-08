@@ -3,10 +3,7 @@ import shutil
 
 from vanilla import *
 
-try:
-    from designSpaceDocument.ufo import DesignSpaceProcessor
-except:
-    from designSpaceDocument.ufoProcessor import DesignSpaceProcessor
+from ufoProcessor import DesignSpaceProcessor
 
 import fontCompiler.objects as compilerObjects
 from fontCompiler.compiler import generateFont, FontCompilerOptions
@@ -224,8 +221,8 @@ class BatchDesignSpaceProcessor(DesignSpaceProcessor):
     def __init__(self, path, ufoVersion=2):
         super(BatchDesignSpaceProcessor, self).__init__(ufoVersion=ufoVersion)
         self.read(path)
-        self.checkAxes()
-        self.checkDefault()
+        #self.checkAxes()
+        #self.checkDefault()
 
     def generateUFO(self):
         # make sure it only generates all instances only once
@@ -292,6 +289,7 @@ class BatchDesignSpaceProcessor(DesignSpaceProcessor):
         """
         self.locations = dict()
         for sourceDescriptor in self.sources:
+            # XX look for layers here
             location = Location(sourceDescriptor.location)
             self.locations[sourceDescriptor.name] = location
 
@@ -303,6 +301,7 @@ class BatchDesignSpaceProcessor(DesignSpaceProcessor):
             defaultLocation[axis.name] = axis.default
         # compare default location with locations all of sources
         for sourceDescriptor in self.sources:
+            # XX default location is defined by which master has all default values
             if defaultLocation == sourceDescriptor.location:
                 # found the default location
                 # do nothing
@@ -338,6 +337,7 @@ class BatchDesignSpaceProcessor(DesignSpaceProcessor):
             if glyphName not in defaultMaster:
                 # the default does not have the glyph
                 # build a repair mutator to generate a glyph
+                # XX not sure we can do this anymore.
                 glyphItems = []
                 for sourceDescriptor in self.sources:
                     master = self.fonts[sourceDescriptor.name]
@@ -367,6 +367,7 @@ class BatchDesignSpaceProcessor(DesignSpaceProcessor):
                 master = self.fonts[sourceDescriptor.name]
                 if glyphName in master:
                     # found do nothing
+                    # XX look for layers here
                     glyphs.append(master[glyphName])
                 else:
                     # get the mutator
