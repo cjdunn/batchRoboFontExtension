@@ -9,7 +9,6 @@ from fontTools.ttLib import TTFont
 
 from mojo.extensions import getExtensionDefault, setExtensionDefault
 from mojo.roboFont import OpenFont
-from mojo.UI import getDefault
 
 from batchTools import settingsIdentifier, Report
 
@@ -77,10 +76,7 @@ class BinaryMerger(Group):
         paths = self.controller.get(["ufo"])
 
         report = Report()
-
-        tempDir = os.path.join(destDir, "temp")
-        if not os.path.exists(tempDir):
-            os.makedirs(tempDir)
+        tempDir = tempfile.mkdtemp()
         tempExportPaths = self._generateCallback(tempDir, progress, report)
 
         progress.update("Merging Tables...")
@@ -90,43 +86,40 @@ class BinaryMerger(Group):
         tableNames = [item["tableName"] for item in self.tableList if item["add"]]
 
         for fontIndex, path in enumerate(paths):
-            font = OpenFont(path, showInterface=False)
+            font = OpenFont(path, showUI=False)
             binarySourcepath = font.lib.get("com.typemytype.robofont.binarySource")
             tempExportPath = tempExportPaths[fontIndex]
             if binarySourcepath:
                 binaryIsOpenType = os.path.splitext(binarySourcepath)[1].lower() in [".ttf", ".otf"]
                 tempIsOpenType = os.path.splitext(tempExportPath)[1].lower() in [".ttf", ".otf"]
                 if binaryIsOpenType and tempIsOpenType:
-                    if os.path.exists(binarySourcepath) and os.path.exists(tempExportPath):
-                        binarySource = TTFont(binarySourcepath)
-                        tempFont = TTFont(tempExportPath)
-                        fileName = os.path.basename(tempExportPath)
-                        if not self.controller.keepFileNames():
-                            fileName = "%s-%s%s" % (font.info.familyName, font.info.styleName, os.path.splitext(tempExportPath)[1])
-                        path = os.path.join(destDir, fileName)
-                        report.writeTitle(os.path.basename(path), "'")
-                        report.write("source: %s" % tempExportPath)
-                        report.write("binary source: %s" % binarySourcepath)
-                        report.newLine()
-                        report.indent()
-                        for table in tableNames:
-                            if table in binarySource:
-                                report.write("merge %s table" % table)
-                                tempFont[table] = binarySource[table]
-                        report.write("save to %s" % path)
-                        tempFont.save(path)
-                        report.dedent()
-                        report.newLine()
-                        tempFont.close()
-                        binarySource.close()
+                    binarySource = TTFont(binarySourcepath)
+                    tempFont = TTFont(tempExportPath)
+                    fileName = os.path.basename(tempExportPath)
+                    if not self.controller.keepFileNames():
+                        fileName = "%s-%s" % (font.info.familyName, font.info.styleName)
+                    path = os.path.join(destDir, fileName)
+                    report.writeTitle(os.path.basename(path), "'")
+                    report.write("source: %s" % path)
+                    report.write("binary source: %s" % binarySource)
+                    report.newLine()
+                    report.indent()
+                    for table in tableNames:
+                        if table in binarySource:
+                            report.write("merge %s table" % table)
+                            tempFont[table] = binarySource[table]
+                    report.dedent()
+                    report.newLine()
+                    tempFont.save(path)
+                    tempFont.close()
+                    binarySource.close()
             font.close()
 
         reportPath = os.path.join(destDir, "Binary Merge Report.txt")
         report.save(reportPath)
 
-        if not getDefault("Batch.Debug", False):
-            if os.path.exists(tempDir):
-                shutil.rmtree(tempDir)
+        if os.path.exists(tempDir):
+            shutil.rmtree(tempDir)
 
     def _generate(self, destDir):
         if not destDir:
